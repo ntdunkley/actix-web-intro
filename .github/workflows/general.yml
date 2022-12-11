@@ -11,17 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Update local toolchain
-        run: |
-          rustup update
-          rustup component add rustfmt
-          rustup component add clippy
-          cargo install cargo-tarpaulin
           
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Update toolchain
+        run: |
+          rustup update
+          rustup component add rustfmt
+          rustup component add clippy
       - name: Rust lint
         run: |
           cargo fmt --check
@@ -35,10 +34,14 @@ jobs:
         run:
           cargo test
           
-  coverage:
+  code_coverage:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Update toolchain
+        run: |
+          rustup update
+          cargo install cargo-tarpaulin
       - name: Code coverage
         run:
           cargo tarpaulin --ignore-tests
