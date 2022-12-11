@@ -16,7 +16,7 @@ jobs:
           rustup component add rustfmt
       - name: Rust format
         run:
-          cargo fmt
+          cargo fmt --check
 
   clippy:
     name: Clippy
