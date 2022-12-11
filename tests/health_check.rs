@@ -65,7 +65,7 @@ async fn when_subscribe_with_invalid_form_data_return_400() {
 fn spawn_app() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
     let port = listener.local_addr().unwrap().port();
-    let server = zero2prod::run(listener).expect("Failed to spawn app");
+    let server = zero2prod::startup::run(listener).expect("Failed to spawn app");
 
     tokio::spawn(server);
 
