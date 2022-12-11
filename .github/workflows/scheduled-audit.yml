@@ -2,11 +2,16 @@ name: Security audit
 on:
   schedule:
     - cron: '0 0 * * *'
+
 jobs:
-  audit:
+  security_audit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/audit-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Update local toolchain
+        run: |
+          rustup update
+          cargo install cargo-audit
+      - name: Run cargo audit
+        run:
+          cargo audit
