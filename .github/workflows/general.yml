@@ -3,7 +3,7 @@ name: Rust
 on: [push, pull_request]
 
 jobs:
-  test:
+  update:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -14,15 +14,27 @@ jobs:
           rustup component add clippy
           cargo install cargo-tarpaulin
           
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
       - name: Rust lint
         run: |
           cargo fmt --check
           cargo clippy -- -D warnings
           
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
       - name: Run tests
         run:
           cargo test
           
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
       - name: Code coverage
         run:
           cargo tarpaulin --ignore-tests
