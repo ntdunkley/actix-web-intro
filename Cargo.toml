@@ -29,4 +29,3 @@ features = [
 
 [dev-dependencies]
 reqwest = "0.11"
-config = "0.13"
