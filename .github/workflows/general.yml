@@ -2,9 +2,6 @@ name: Rust
 
 on: [push, pull_request]
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -17,15 +14,12 @@ jobs:
           rustup component add clippy
           cargo install cargo-tarpaulin
           
-      - name: Format
-        run:
+      - name: Rust lint
+        run: |
           cargo fmt --check
-          
-      - name: Cargo clippy
-        run:
           cargo clippy -- -D warnings
           
-      - name: Rust lint
+      - name: Run tests
         run:
           cargo test
           
