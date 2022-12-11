@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Update local toolchain
-        run:
+        run: |
           rustup update
           cargo install cargo-audit
       - name: Run cargo audit
