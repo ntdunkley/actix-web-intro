@@ -1,0 +1,17 @@
+name: Audit Daily
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  audit_daily:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Update local toolchain
+        run: |
+          rustup update
+          cargo install cargo-audit
+      - name: Run cargo audit
+        run:
+          cargo audit
