@@ -5,6 +5,7 @@ on:
     branches:
       - main
   pull_request:
+    types: [ opened, synchronize, reopened ]
 
 jobs:   
   format:
@@ -33,11 +34,52 @@ jobs:
           
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:12
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: postgres
+        ports:
+          - 5321:5432
+    env:
+      SQLX_VERSION: 0.6.2
+      SQLX_FEATURES: "rustls,postgres"
     steps:
       - uses: actions/checkout@v3
       - name: Update toolchain
         run: |
           rustup update
+      - name: Cache dependencies
+        id: cache-dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache sqlx-cli
+        uses: actions/cache@v3
+        id: cache-sqlx
+        with:
+          path: |
+            ~/.cargo/bin/sqlx
+          key: ${{ runner.os }}-sqlx-${{ env.SQLX_VERSION }}
+
+      - name: Install sqlx-cli
+        if: cache-sqlx.outputs.cache-hit == false
+        run:
+          cargo install sqlx-cli --force --locked --version ${{ env.SQLX_FEATURES }} --no-default-features --features ${{ env.SQLX_FEATURES }}
+
+      - name: Migrate database
+        run: |
+          sudo apt-get install libpq-dev -y
+          SKIP_DOCKER=true ./scripts/init_db.sh
+
       - name: Run tests
         run:
           cargo test
+          
