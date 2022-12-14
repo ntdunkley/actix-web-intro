@@ -72,7 +72,7 @@ jobs:
       - name: Install sqlx-cli
         if: steps.cache-sqlx.outputs.cache-hit == false
         run:
-          cargo install sqlx-cli --force --locked --version ${{ env.SQLX_FEATURES }} --no-default-features --features ${{ env.SQLX_FEATURES }}
+          cargo install sqlx-cli --force --locked --version ${{ env.SQLX_VERSION }} --no-default-features --features ${{ env.SQLX_FEATURES }}
 
       - name: Migrate database
         run: |
