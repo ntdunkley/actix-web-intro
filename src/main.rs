@@ -1,3 +1,4 @@
+use sqlx::PgPool;
 use std::net::TcpListener;
 use zero2prod::config;
 use zero2prod::startup;
@@ -10,5 +11,9 @@ async fn main() -> std::io::Result<()> {
     let listener = TcpListener::bind(address)
         .unwrap_or_else(|_| panic!("Could not bind port {}", config.application_port));
 
-    startup::run(listener)?.await
+    let db_pool = PgPool::connect(config.database.connection_string().as_str())
+        .await
+        .expect("Could not open postgres connection");
+
+    startup::run(listener, db_pool)?.await
 }

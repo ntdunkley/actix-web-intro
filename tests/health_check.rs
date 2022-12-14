@@ -1,15 +1,60 @@
-use sqlx::{Connection, PgConnection};
+use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
+use uuid::Uuid;
 use zero2prod::config;
+use zero2prod::config::DatabaseSettings;
+
+struct TestApp {
+    address: String,
+    db_pool: PgPool,
+}
+
+async fn spawn_app() -> TestApp {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
+    let port = listener.local_addr().unwrap().port();
+
+    let mut config = config::get_config().expect("Failed to read config file");
+    config.database.database_name = Uuid::new_v4().to_string();
+    let db_pool = configure_db(&config.database).await;
+
+    let server = zero2prod::startup::run(listener, db_pool.clone()).expect("Failed to spawn app");
+
+    tokio::spawn(server);
+
+    let address = format!("http://127.0.0.1:{}", port);
+
+    TestApp { address, db_pool }
+}
+
+async fn configure_db(settings: &DatabaseSettings) -> PgPool {
+    // Create DB
+    let mut connection = PgConnection::connect(settings.connection_string_without_db().as_str())
+        .await
+        .expect("Failed to connect to postgres");
+    connection
+        .execute(format!(r#"CREATE DATABASE "{}";"#, settings.database_name).as_str())
+        .await
+        .expect("Failed to create database");
+
+    // Migrate DB
+    let db_pool = PgPool::connect(settings.connection_string().as_str())
+        .await
+        .expect("Failed to connect to postgres");
+    sqlx::migrate!("./migrations")
+        .run(&db_pool)
+        .await
+        .expect("Failed to migrate database");
+    db_pool
+}
 
 #[tokio::test]
 async fn health_check_works() {
-    let address = spawn_app();
+    let test_app = spawn_app().await;
 
     let client = reqwest::Client::new();
 
     let response = client
-        .get(format!("{}/health_check", &address))
+        .get(format!("{}/health_check", test_app.address))
         .send()
         .await
         .expect("Failed to execute GET health_check");
@@ -20,29 +65,22 @@ async fn health_check_works() {
 
 #[tokio::test]
 async fn when_subscribe_with_valid_form_data_return_200() {
-    let address = spawn_app();
-    let config = config::get_config().expect("Failed to read config file");
-    let database_connection_str = config.database.connection_string();
-    let mut connection = PgConnection::connect(&database_connection_str)
-        .await
-        .expect("Failed to connect to Postgres");
-
+    let test_app = spawn_app().await;
     let client = reqwest::Client::new();
 
-    let body = "_name=bryan&_email=bryan%40gmail.com";
+    let body = "name=bryan&email=bryan%40gmail.com";
     let response = client
-        .post(format!("{}/subscriptions", &address))
+        .post(format!("{}/subscriptions", test_app.address))
         .header("Content-Type", "application/x-www-form-urlencoded")
         .body(body)
         .send()
         .await
         .expect("Failed to execute POST subscribe");
-
     assert_eq!(response.status().as_u16(), 200);
 
-    // Test that entry was inserted into the database successfully
+    // Test that the entry was inserted into the database successfully
     let query = sqlx::query!("SELECT name, email FROM subscriptions")
-        .fetch_one(&mut connection)
+        .fetch_one(&test_app.db_pool)
         .await
         .expect("Failed to fetch saved subscriptions");
     assert_eq!(query.name, "bryan");
@@ -51,7 +89,7 @@ async fn when_subscribe_with_valid_form_data_return_200() {
 
 #[tokio::test]
 async fn when_subscribe_with_invalid_form_data_return_400() {
-    let address = spawn_app();
+    let test_app = spawn_app().await;
     let client = reqwest::Client::new();
 
     let test_cases = vec![
@@ -62,7 +100,7 @@ async fn when_subscribe_with_invalid_form_data_return_400() {
 
     for (invalid_body, error_message) in test_cases {
         let response = client
-            .post(format!("{}/subscriptions", &address))
+            .post(format!("{}/subscriptions", test_app.address))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(invalid_body)
             .send()
@@ -76,14 +114,4 @@ async fn when_subscribe_with_invalid_form_data_return_400() {
             error_message
         );
     }
-}
-
-fn spawn_app() -> String {
-    let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
-    let port = listener.local_addr().unwrap().port();
-    let server = zero2prod::startup::run(listener).expect("Failed to spawn app");
-
-    tokio::spawn(server);
-
-    format!("http://127.0.0.1:{}", port)
 }
