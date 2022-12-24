@@ -1,3 +1,4 @@
+use secrecy::ExposeSecret;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 use std::sync::Once;
@@ -47,16 +48,21 @@ async fn spawn_app() -> TestApp {
 
 async fn configure_db(settings: &DatabaseSettings) -> PgPool {
     // Create DB
-    let mut connection = PgConnection::connect(settings.connection_string_without_db().as_str())
-        .await
-        .expect("Failed to connect to postgres");
+    let mut connection = PgConnection::connect(
+        settings
+            .connection_string_without_db()
+            .expose_secret()
+            .as_str(),
+    )
+    .await
+    .expect("Failed to connect to postgres");
     connection
         .execute(format!(r#"CREATE DATABASE "{}";"#, settings.database_name).as_str())
         .await
         .expect("Failed to create database");
 
     // Migrate DB
-    let db_pool = PgPool::connect(settings.connection_string().as_str())
+    let db_pool = PgPool::connect(settings.connection_string().expose_secret().as_str())
         .await
         .expect("Failed to connect to postgres");
     sqlx::migrate!("./migrations")
