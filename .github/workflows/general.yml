@@ -117,8 +117,12 @@ jobs:
 
       - name: Migrate database
         run: |
-          sudo apt-get install libpq-dev -y
+          sudo apt install libpq-dev -y
           SKIP_DOCKER=true ./scripts/init_db.sh
+          
+      - name: Check sqlx-data.json is up-to-date
+        run:
+          cargo sqlx prepare --check -- --bin zero2prod
 
       - name: Run tests
         run:
