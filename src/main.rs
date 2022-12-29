@@ -18,8 +18,7 @@ async fn main() -> std::io::Result<()> {
 
     let db_pool = PgPoolOptions::new()
         .acquire_timeout(std::time::Duration::from_secs(2))
-        .connect(config.database.connection_string().expose_secret().as_str())
-        .await
+        .connect_lazy(config.database.connection_string().expose_secret().as_str())
         .expect("Could not open postgres connection");
 
     startup::run(listener, db_pool)?.await
