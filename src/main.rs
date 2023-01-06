@@ -1,4 +1,3 @@
-use secrecy::ExposeSecret;
 use sqlx::postgres::PgPoolOptions;
 use std::net::TcpListener;
 use zero2prod::config;
@@ -18,8 +17,7 @@ async fn main() -> std::io::Result<()> {
 
     let db_pool = PgPoolOptions::new()
         .acquire_timeout(std::time::Duration::from_secs(2))
-        .connect_lazy(config.database.connection_string().expose_secret().as_str())
-        .expect("Could not open postgres connection");
+        .connect_lazy_with(config.database.with_db());
 
     startup::run(listener, db_pool)?.await
 }
