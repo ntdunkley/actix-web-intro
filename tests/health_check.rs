@@ -7,6 +7,7 @@ use uuid::Uuid;
 
 use zero2prod::config;
 use zero2prod::config::DatabaseSettings;
+use zero2prod::email_client::EmailClient;
 use zero2prod::telemetry;
 
 static TRACING: Once = Once::new();
@@ -39,7 +40,14 @@ async fn spawn_app() -> TestApp {
     config.database.database_name = Uuid::new_v4().to_string();
     let db_pool = configure_db(&config.database).await;
 
-    let server = zero2prod::startup::run(listener, db_pool.clone()).expect("Failed to spawn app");
+    let sender_email = config
+        .email_client
+        .sender_email()
+        .expect("Could not parse sender email");
+    let email_client = EmailClient::new(config.email_client.base_url, sender_email);
+
+    let server = zero2prod::startup::run(listener, db_pool.clone(), email_client)
+        .expect("Failed to spawn app");
 
     tokio::spawn(server);
 
