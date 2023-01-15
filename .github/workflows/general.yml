@@ -20,7 +20,7 @@ jobs:
         run: |
           cargo fmt --check
           
-  lint:
+  clippy:
     runs-on: ubuntu-latest
     services:
       postgres:
