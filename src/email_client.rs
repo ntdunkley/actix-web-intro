@@ -113,7 +113,7 @@ mod tests {
             base_url,
             email(),
             Secret::new(Faker.fake()),
-            Duration::from_secs(1),
+            Duration::from_millis(200),
         )
     }
 
