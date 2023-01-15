@@ -5,5 +5,4 @@ database:
   require_ssl: true
 
 email_client:
-  base_url: https://api.postmarkapp.com/email
-  sender_email: nathan.dunkley@bondsmith.co.uk
+  base_url: https://api.postmarkapp.com

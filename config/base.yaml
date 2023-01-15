@@ -10,6 +10,6 @@ database:
 
 email_client:
   base_url: localhost
-  sender_email: test@gmail.com
+  sender_email: nathan.dunkley@bondsmith.co.uk
   auth_token: ae2d3b1a-d8f0-45a7-bdfb-5dc263fdbed0
   timeout_milliseconds: 10000
