@@ -7,3 +7,9 @@ database:
   host: 127.0.0.1
   port: 5321
   database_name: newsletter
+
+email_client:
+  base_url: localhost
+  sender_email: test@gmail.com
+  auth_token: ae2d3b1a-d8f0-45a7-bdfb-5dc263fdbed0
+  timeout_milliseconds: 10000

@@ -4,6 +4,7 @@ use serde::Deserialize;
 use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use sqlx::ConnectOptions;
+use std::time::Duration;
 
 #[derive(Deserialize)]
 pub struct Settings {
@@ -33,8 +34,9 @@ pub struct ApplicationSettings {
 #[derive(Deserialize)]
 pub struct EmailClientSettings {
     pub base_url: String,
-    sender_email: String,
+    pub sender_email: String,
     pub auth_token: Secret<String>,
+    pub timeout_milliseconds: u64,
 }
 
 pub enum Environment {
@@ -94,6 +96,10 @@ impl TryFrom<String> for Environment {
 impl EmailClientSettings {
     pub fn sender_email(&self) -> Result<SubscriberEmail, String> {
         SubscriberEmail::parse(self.sender_email.clone())
+    }
+
+    pub fn timeout(&self) -> Duration {
+        Duration::from_millis(self.timeout_milliseconds)
     }
 }
 

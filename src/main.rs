@@ -24,10 +24,12 @@ async fn main() -> std::io::Result<()> {
         .email_client
         .sender_email()
         .expect("Could not parse sender email");
+    let timeout = config.email_client.timeout();
     let email_client = EmailClient::new(
         config.email_client.base_url,
         sender_email,
         config.email_client.auth_token,
+        timeout,
     );
 
     startup::run(listener, db_pool, email_client)?.await
