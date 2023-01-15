@@ -30,6 +30,13 @@ pub struct ApplicationSettings {
     pub host: String,
 }
 
+#[derive(Deserialize)]
+pub struct EmailClientSettings {
+    pub base_url: String,
+    sender_email: String,
+    pub auth_token: Secret<String>,
+}
+
 pub enum Environment {
     LOCAL,
     PROD,
@@ -82,12 +89,6 @@ impl TryFrom<String> for Environment {
             )),
         }
     }
-}
-
-#[derive(Deserialize)]
-pub struct EmailClientSettings {
-    pub base_url: String,
-    sender_email: String,
 }
 
 impl EmailClientSettings {
