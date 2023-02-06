@@ -54,7 +54,7 @@ pub async fn spawn_app() -> TestApp {
 
     tokio::spawn(server);
 
-    let address = format!("http://127.0.0.1:{}", port);
+    let address = format!("http://127.0.0.1:{port}");
 
     TestApp { address, db_pool }
 }

@@ -48,8 +48,7 @@ async fn when_subscribe_with_invalid_form_data_return_400() {
         assert_eq!(
             response.status(),
             StatusCode::BAD_REQUEST,
-            "The API did not return 400 when payload was {}",
-            error_message
+            "The API did not return 400 when payload was {error_message}"
         );
     }
 }
@@ -77,8 +76,7 @@ async fn when_subscribe_with_fields_that_are_present_but_invalid_return_400() {
         assert_eq!(
             response.status(),
             StatusCode::BAD_REQUEST,
-            "The API did not return 400 when payload had an {}",
-            error_message
+            "The API did not return 400 when payload had an {error_message}"
         );
     }
 }
