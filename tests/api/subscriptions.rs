@@ -1,19 +1,22 @@
 use crate::helpers::spawn_app;
 use reqwest::StatusCode;
+use wiremock::http::Method;
+use wiremock::matchers::{method, path};
+use wiremock::{Mock, ResponseTemplate};
 
 #[tokio::test]
 async fn when_subscribe_with_valid_form_data_return_200() {
     let test_app = spawn_app().await;
-    let client = reqwest::Client::new();
+
+    Mock::given(path("/email"))
+        .and(method(Method::Post))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&test_app.email_server)
+        .await;
 
     let body = "name=bryan&email=bryan%40gmail.com";
-    let response = client
-        .post(format!("{}/subscriptions", test_app.address))
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .body(body)
-        .send()
-        .await
-        .expect("Failed to execute POST subscribe");
+    let response = test_app.post_subscriptions(body.to_string()).await;
     assert_eq!(response.status(), StatusCode::OK);
 
     // Test that the entry was inserted into the database successfully
@@ -29,7 +32,6 @@ async fn when_subscribe_with_valid_form_data_return_200() {
 #[tokio::test]
 async fn when_subscribe_with_invalid_form_data_return_400() {
     let test_app = spawn_app().await;
-    let client = reqwest::Client::new();
 
     let test_cases = vec![
         ("name=bryan", "missing email"),
@@ -38,13 +40,7 @@ async fn when_subscribe_with_invalid_form_data_return_400() {
     ];
 
     for (invalid_body, error_message) in test_cases {
-        let response = client
-            .post(format!("{}/subscriptions", test_app.address))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(invalid_body)
-            .send()
-            .await
-            .expect("Failed to execute POST subscribe");
+        let response = test_app.post_subscriptions(invalid_body.to_string()).await;
 
         assert_eq!(
             response.status(),
@@ -57,7 +53,6 @@ async fn when_subscribe_with_invalid_form_data_return_400() {
 #[tokio::test]
 async fn when_subscribe_with_fields_that_are_present_but_invalid_return_400() {
     let test_app = spawn_app().await;
-    let client = reqwest::Client::new();
     let test_cases = vec![
         ("name=&email=bryan%40gmail.com", "empty name"),
         ("name=bryan&email=", "empty email"),
@@ -66,13 +61,9 @@ async fn when_subscribe_with_fields_that_are_present_but_invalid_return_400() {
     ];
 
     for (invalid_test_case, error_message) in test_cases {
-        let response = client
-            .post(format!("{}/subscriptions", test_app.address))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(invalid_test_case)
-            .send()
-            .await
-            .expect("Failed to execute POST subscribe");
+        let response = test_app
+            .post_subscriptions(invalid_test_case.to_string())
+            .await;
 
         assert_eq!(
             response.status(),
@@ -80,4 +71,21 @@ async fn when_subscribe_with_fields_that_are_present_but_invalid_return_400() {
             "The API did not return 400 when payload had an {error_message}"
         );
     }
+}
+
+#[tokio::test]
+async fn subscribe_with_valid_data_sends_email_confirmation() {
+    let test_app = spawn_app().await;
+    let body = "name=bryan&email=bryan%40gmail.com";
+
+    Mock::given(path("/email"))
+        .and(method(Method::Post))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&test_app.email_server)
+        .await;
+
+    test_app.post_subscriptions(body.to_string()).await;
+
+    // Mock asserts when dropped
 }

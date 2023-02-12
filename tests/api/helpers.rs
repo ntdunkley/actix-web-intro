@@ -1,6 +1,7 @@
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::sync::Once;
 use uuid::Uuid;
+use wiremock::MockServer;
 use zero2prod::config;
 use zero2prod::config::DatabaseSettings;
 use zero2prod::startup::get_db_pool;
@@ -12,6 +13,19 @@ static TRACING: Once = Once::new();
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
+    pub email_server: MockServer,
+}
+
+impl TestApp {
+    pub async fn post_subscriptions(&self, body: String) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(format!("{}/subscriptions", self.address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to execute POST subscribe")
+    }
 }
 
 pub async fn spawn_app() -> TestApp {
@@ -30,11 +44,15 @@ pub async fn spawn_app() -> TestApp {
         }
     });
 
+    // Launch a mock server to act as Postmark's API
+    let email_server = MockServer::start().await;
+
     // Randomise config to ensure test isolation
     let config = {
         let mut c = config::get_config().expect("Failed to read config file");
         c.database.database_name = Uuid::new_v4().to_string();
         c.application.port = 0;
+        c.email_client.base_url = email_server.uri();
         c
     };
 
@@ -52,6 +70,7 @@ pub async fn spawn_app() -> TestApp {
     TestApp {
         address,
         db_pool: get_db_pool(&config.database),
+        email_server,
     }
 }
 
