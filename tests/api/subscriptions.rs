@@ -17,12 +17,13 @@ async fn when_subscribe_with_valid_form_data_return_200() {
     assert_eq!(response.status(), StatusCode::OK);
 
     // Test that the entry was inserted into the database successfully
-    let query = sqlx::query!("SELECT name, email FROM subscriptions")
+    let query = sqlx::query!("SELECT name, email, status FROM subscription")
         .fetch_one(&test_app.db_pool)
         .await
-        .expect("Failed to fetch saved subscriptions");
+        .expect("Failed to fetch saved subscription");
     assert_eq!(query.name, "bryan");
     assert_eq!(query.email, "bryan@gmail.com");
+    assert_eq!(query.status, "confirmed");
 }
 
 #[tokio::test]

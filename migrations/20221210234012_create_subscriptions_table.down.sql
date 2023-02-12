@@ -1,2 +1,2 @@
--- Drop subscriptions table
-DROP TABLE subscriptions;
+-- Drop subscription table
+DROP TABLE subscription;
