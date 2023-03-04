@@ -47,20 +47,7 @@ pub async fn subscribe(
     };
 
     // Send confirmation email to the new subscriber
-    let confirmation_link = "https://my-api.com/subscriptions/confirm";
-
-    if email_client
-        .send_email(
-            new_subscriber.email,
-            "Welcome!",
-            &format!(
-                "Welcome to our newsletter!<br/>\
-                Click <a href=\"{confirmation_link}\">here</a> to confirm your subscription."
-            ),
-            &format!(
-                "Welcome to our newsletter!\nVisit {confirmation_link} to confirm your subscription."
-            ),
-        )
+    if send_confirmation_email(&email_client, new_subscriber)
         .await
         .is_err()
     {
@@ -92,4 +79,22 @@ async fn insert_subscriber(
         e
     })?;
     Ok(())
+}
+
+#[tracing::instrument("Sending a confirmation email to a new subscriber", skip_all)]
+async fn send_confirmation_email(
+    email_client: &EmailClient,
+    new_subscriber: NewSubscriber,
+) -> Result<(), reqwest::Error> {
+    let confirmation_link = "https://my-api.com/subscriptions/confirm";
+    let html_body = format!(
+        "Welcome to our newsletter!<br/>\
+                Click <a href=\"{confirmation_link}\">here</a> to confirm your subscription."
+    );
+    let text_body = format!(
+        "Welcome to our newsletter!\nVisit {confirmation_link} to confirm your subscription."
+    );
+    email_client
+        .send_email(new_subscriber.email, "Welcome!", &html_body, &text_body)
+        .await
 }
