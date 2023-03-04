@@ -18,15 +18,32 @@ async fn when_subscribe_with_valid_form_data_return_200() {
     let body = "name=bryan&email=bryan%40gmail.com";
     let response = test_app.post_subscriptions(body.to_string()).await;
     assert_eq!(response.status(), StatusCode::OK);
+}
 
-    // Test that the entry was inserted into the database successfully
+#[tokio::test]
+async fn when_subscribe_new_subscriber_is_persisted() {
+    // Given
+    let test_app = spawn_app().await;
+
+    Mock::given(path("/email"))
+        .and(method(Method::Post))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&test_app.email_server)
+        .await;
+
+    let body = "name=bryan&email=bryan%40gmail.com";
+
+    // When
+    test_app.post_subscriptions(body.to_string()).await;
+
+    // Then
     let query = sqlx::query!("SELECT name, email, status FROM subscription")
         .fetch_one(&test_app.db_pool)
         .await
         .expect("Failed to fetch saved subscription");
     assert_eq!(query.name, "bryan");
     assert_eq!(query.email, "bryan@gmail.com");
-    assert_eq!(query.status, "confirmed");
+    assert_eq!(query.status, "pending_confirmation");
 }
 
 #[tokio::test]
