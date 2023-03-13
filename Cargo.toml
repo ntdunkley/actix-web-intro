@@ -26,6 +26,7 @@ tracing-actix-web = "0.7"
 secrecy = { version = "0.8.0", features = ["serde"] }
 unicode-segmentation = "1"
 validator = "0.16"
+rand = { version = "0.8", features = ["std_rng"] }
 
 [dependencies.sqlx]
 version = "0.6"
