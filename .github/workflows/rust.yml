@@ -20,7 +20,7 @@ jobs:
         run: |
           cargo fmt --check
           
-  clippy:
+  test:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -57,6 +57,7 @@ jobs:
         with:
           path: |
             ~/.cargo/bin/sqlx
+            ~/.cargo/bin/cargo-sqlx
           key: ${{ runner.os }}-sqlx-${{ env.SQLX_VERSION }}
 
       - name: Install sqlx-cli
