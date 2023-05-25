@@ -10,7 +10,7 @@ impl AsRef<str> for SubscriberEmail {
 impl SubscriberEmail {
     pub fn parse(email: String) -> Result<Self, String> {
         if !validator::validate_email(&email) {
-            Err(format!("{email} is not a valid subscriber email."))
+            Err(format!("{} is not a valid subscriber email.", email))
         } else {
             Ok(Self(email))
         }
