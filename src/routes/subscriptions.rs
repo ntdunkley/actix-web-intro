@@ -13,6 +13,7 @@ use uuid::Uuid;
 use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
 use crate::email_client::EmailClient;
 use crate::startup::ApplicationBaseUrl;
+use crate::utils;
 
 #[derive(Deserialize, Debug)]
 pub struct FormData {
@@ -171,7 +172,7 @@ pub enum SubscribeError {
 
 impl Debug for SubscribeError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        error_chain_fmt(self, f)
+        utils::errors::error_chain_fmt(self, f)
     }
 }
 
@@ -188,7 +189,7 @@ pub struct StoreTokenError(sqlx::Error);
 
 impl Debug for StoreTokenError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        error_chain_fmt(self, f)
+        utils::errors::error_chain_fmt(self, f)
     }
 }
 
@@ -206,14 +207,4 @@ impl Error for StoreTokenError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         Some(&self.0)
     }
-}
-
-fn error_chain_fmt(e: &impl Error, f: &mut Formatter<'_>) -> std::fmt::Result {
-    writeln!(f, "{}\n", e)?;
-    let mut current = e.source();
-    while let Some(cause) = current {
-        writeln!(f, "Caused by:\n\t{}", cause)?;
-        current = cause.source();
-    }
-    Ok(())
 }
