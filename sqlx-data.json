@@ -13,6 +13,24 @@
     },
     "query": "\n            INSERT INTO subscription_token(subscription_id, subscription_token)\n            VALUES ($1, $2)\n        "
   },
+  "51d5835225a5d93d54b6d4a6bb6478cc9b5f44a2b4ec569f1a58a37946abcc86": {
+    "describe": {
+      "columns": [
+        {
+          "name": "email",
+          "ordinal": 0,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\n        SELECT email\n        FROM subscription\n        WHERE status = 'confirmed'\n        "
+  },
   "a928ddb6c156b87395875b395b2ee193974f86254ca6576a264a83f45913cd22": {
     "describe": {
       "columns": [
