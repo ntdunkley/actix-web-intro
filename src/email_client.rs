@@ -41,7 +41,7 @@ impl EmailClient {
 
     pub async fn send_email(
         &self,
-        recipient_email: SubscriberEmail,
+        recipient_email: &SubscriberEmail,
         subject: &str,
         html_content: &str,
         text_content: &str,
@@ -137,7 +137,7 @@ mod tests {
         let content = content();
 
         let _ = email_client
-            .send_email(subscriber_email, &subject, &content, &content)
+            .send_email(&subscriber_email, &subject, &content, &content)
             .await;
 
         // Assert - Mock server's expectations will be evaluated when it goes out of scope
@@ -159,7 +159,7 @@ mod tests {
         let content = content();
 
         let outcome = email_client
-            .send_email(subscriber_email, &subject, &content, &content)
+            .send_email(&subscriber_email, &subject, &content, &content)
             .await;
 
         assert_ok!(outcome);
@@ -181,7 +181,7 @@ mod tests {
         let content = content();
 
         let outcome = email_client
-            .send_email(subscriber_email, &subject, &content, &content)
+            .send_email(&subscriber_email, &subject, &content, &content)
             .await;
 
         assert_err!(outcome);
@@ -204,7 +204,7 @@ mod tests {
         let content = content();
 
         let outcome = email_client
-            .send_email(subscriber_email, &subject, &content, &content)
+            .send_email(&subscriber_email, &subject, &content, &content)
             .await;
 
         assert_err!(outcome);

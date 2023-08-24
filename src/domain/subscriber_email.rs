@@ -1,5 +1,5 @@
 #[derive(Debug)]
-pub struct SubscriberEmail(String);
+pub struct SubscriberEmail(pub String);
 
 impl AsRef<str> for SubscriberEmail {
     fn as_ref(&self) -> &str {
