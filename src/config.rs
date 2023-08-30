@@ -62,7 +62,7 @@ impl DatabaseSettings {
             .host(&self.host)
             .port(self.port)
             .ssl_mode(ssl_mode);
-        options.log_statements(tracing::log::LevelFilter::Info)
+        options.log_statements(tracing::log::LevelFilter::Debug)
     }
 }
 

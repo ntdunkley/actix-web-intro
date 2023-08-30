@@ -1,18 +1,20 @@
 use crate::domain::SubscriberEmail;
 use crate::email_client::EmailClient;
 use crate::utils;
-use actix_web::http::StatusCode;
-use actix_web::{web, HttpResponse, ResponseError};
+use actix_web::http::header::{HeaderMap, HeaderValue};
+use actix_web::http::{header, StatusCode};
+use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
 use anyhow::Context;
+use base64::Engine;
 use sqlx::PgPool;
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug)]
 pub struct BodyData {
     title: String,
     content: Content,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug)]
 pub struct Content {
     html: String,
     text: String,
@@ -22,11 +24,19 @@ struct ConfirmedSubscriber {
     email: SubscriberEmail,
 }
 
+#[tracing::instrument(
+    name = "Publishing newsletters to confirmed subscribers",
+    skip(db_pool, email_client, http_request)
+)]
 pub async fn publish_newsletter(
     body: web::Json<BodyData>,
     db_pool: web::Data<PgPool>,
     email_client: web::Data<EmailClient>,
+    http_request: HttpRequest,
 ) -> Result<HttpResponse, PublishError> {
+    let _credentials =
+        basic_authentication(http_request.headers()).map_err(PublishError::AuthError)?;
+
     let subscribers = get_confirmed_subscribers(&db_pool).await?;
     for subscriber in subscribers {
         match subscriber {
@@ -81,8 +91,48 @@ async fn get_confirmed_subscribers(
     Ok(confirmed_subscribers)
 }
 
+struct Credentials {
+    _username: String,
+    _password: secrecy::Secret<String>,
+}
+
+fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Error> {
+    let auth_header = headers
+        .get("Authorization")
+        .context("The 'Authorization' header was missing")?
+        .to_str()
+        .context("The 'Authorization' must be valid UTF-8")?
+        .strip_prefix("Basic ")
+        .context("The authorization scheme was not 'Basic'.")?;
+
+    let decoded_bytes = base64::engine::general_purpose::STANDARD
+        .decode(auth_header)
+        .context("Failed to base64-decode 'Basic' credentials.")?;
+    let decoded_credentials = String::from_utf8(decoded_bytes)
+        .context("The decoded credential string is not valid UTF8.")?;
+
+    // Split into two segments, using ':' as delimiter
+    let mut credentials = decoded_credentials.splitn(2, ':');
+    let username = credentials
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("A username must be provided in 'Basic' auth."))?
+        .to_string();
+    let password = credentials
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("A password must be provided in 'Basic' auth."))?
+        .to_string();
+
+    Ok(Credentials {
+        _username: username,
+        _password: secrecy::Secret::new(password),
+    })
+}
+
 #[derive(thiserror::Error)]
 pub enum PublishError {
+    #[error("Authentication failed")]
+    AuthError(#[source] anyhow::Error),
+
     #[error(transparent)]
     UnexpectedError(#[from] anyhow::Error),
 }
@@ -94,9 +144,20 @@ impl std::fmt::Debug for PublishError {
 }
 
 impl ResponseError for PublishError {
-    fn status_code(&self) -> StatusCode {
+    fn error_response(&self) -> HttpResponse {
         match self {
-            PublishError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            PublishError::UnexpectedError(_) => {
+                HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR)
+            }
+            PublishError::AuthError(_) => {
+                let mut response = HttpResponse::new(StatusCode::UNAUTHORIZED);
+                let header_value = HeaderValue::from_str(r#"Basic realm="publish""#).unwrap();
+                response
+                    .headers_mut()
+                    .insert(header::WWW_AUTHENTICATE, header_value);
+
+                response
+            }
         }
     }
 }

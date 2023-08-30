@@ -10,7 +10,7 @@ async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
 
     create_unconfirmed_subscriber(&app).await;
 
-    Mock::given(any())
+    let _mock = Mock::given(any())
         .respond_with(ResponseTemplate::new(200))
         .expect(0)
         .mount(&app.email_server)
@@ -66,10 +66,10 @@ async fn newsletters_returns_400_for_invalid_data() {
     let test_cases = vec![
         (
             serde_json::json!({
-            "content": {
-            "text": "Newsletter body as plain text",
-            "html": "<p>Newsletter body as HTML</p>",
-            }
+                "content": {
+                    "text": "Newsletter body as plain text",
+                    "html": "<p>Newsletter body as HTML</p>",
+                }
             }),
             "missing title",
         ),
@@ -89,6 +89,30 @@ async fn newsletters_returns_400_for_invalid_data() {
             error_message
         );
     }
+}
+
+#[tokio::test]
+async fn requests_without_authorisation_header_are_rejected() {
+    let app = spawn_app().await;
+
+    let response = reqwest::Client::new()
+        .post(format!("{}/newsletters", app.address))
+        .json(&serde_json::json!({
+            "title": "Newsletter!",
+            "content": {
+                "text": "Newsletter body as plain text",
+                "html": "<p>Newsletter body as HTML</p>",
+            }
+        }))
+        .send()
+        .await
+        .expect("Failed to execute request");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(
+        response.headers()["WWW-Authenticate"],
+        r#"Basic realm="publish""#
+    );
 }
 
 async fn create_unconfirmed_subscriber(app: &TestApp) -> ConfirmationLinks {
