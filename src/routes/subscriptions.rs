@@ -8,6 +8,7 @@ use serde::Deserialize;
 use sqlx::{PgPool, Postgres, Transaction};
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
+use std::ops::DerefMut;
 use uuid::Uuid;
 
 use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
@@ -98,7 +99,7 @@ async fn insert_subscriber(
         new_subscriber.name.as_ref(),
         Utc::now()
     )
-    .execute(transaction)
+    .execute(transaction.deref_mut())
     .await?;
     Ok(subscriber_id)
 }
@@ -120,7 +121,7 @@ async fn store_token(
         subscriber_id,
         subscriber_token
     )
-    .execute(transaction)
+    .execute(transaction.deref_mut())
     .await
     .map_err(StoreTokenError)?;
     Ok(())

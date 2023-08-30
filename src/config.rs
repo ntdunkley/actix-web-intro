@@ -56,14 +56,13 @@ impl DatabaseSettings {
         } else {
             PgSslMode::Prefer
         };
-        let mut options = PgConnectOptions::new()
+        let options = PgConnectOptions::new()
             .username(&self.username)
             .password(self.password.expose_secret())
             .host(&self.host)
             .port(self.port)
             .ssl_mode(ssl_mode);
-        options.log_statements(tracing::log::LevelFilter::Info);
-        options
+        options.log_statements(tracing::log::LevelFilter::Info)
     }
 }
 

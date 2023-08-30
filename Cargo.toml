@@ -31,7 +31,7 @@ thiserror = "1"
 anyhow = "1"
 
 [dependencies.sqlx]
-version = "0.6"
+version = "0.7"
 default-features = false
 features = [
     "runtime-tokio-rustls",
@@ -39,8 +39,7 @@ features = [
     "postgres",
     "uuid",
     "chrono",
-    "migrate",
-    "offline"
+    "migrate"
 ]
 
 [dependencies.reqwest]
@@ -56,4 +55,4 @@ quickcheck_macros = "1.0"
 claims = "0.7"
 wiremock = "0.5"
 serde_json = "1"
-linkify = "0.9.0"
+linkify = "0"
