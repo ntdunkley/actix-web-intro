@@ -1,4 +1,4 @@
-name: Rust
+name: Build
 
 on:
   push:
@@ -32,7 +32,7 @@ jobs:
         ports:
           - 5321:5432
     env:
-      SQLX_VERSION: 0.6.2
+      SQLX_VERSION: 0.7.1
       SQLX_FEATURES: "rustls,postgres"
     steps:
       - uses: actions/checkout@v3
