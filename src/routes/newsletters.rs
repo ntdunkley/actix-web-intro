@@ -6,6 +6,7 @@ use actix_web::http::{header, StatusCode};
 use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
 use anyhow::Context;
 use base64::Engine;
+use secrecy::ExposeSecret;
 use sqlx::PgPool;
 
 #[derive(serde::Deserialize, Debug)]
@@ -26,7 +27,8 @@ struct ConfirmedSubscriber {
 
 #[tracing::instrument(
     name = "Publishing newsletters to confirmed subscribers",
-    skip(db_pool, email_client, http_request)
+    skip(body, db_pool, email_client, http_request),
+    fields(username=tracing::field::Empty, user_id=tracing::field::Empty)
 )]
 pub async fn publish_newsletter(
     body: web::Json<BodyData>,
@@ -34,8 +36,12 @@ pub async fn publish_newsletter(
     email_client: web::Data<EmailClient>,
     http_request: HttpRequest,
 ) -> Result<HttpResponse, PublishError> {
-    let _credentials =
+    let credentials =
         basic_authentication(http_request.headers()).map_err(PublishError::AuthError)?;
+    tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
+
+    let user_id = validate_credentials(&credentials, &db_pool).await?;
+    tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
 
     let subscribers = get_confirmed_subscribers(&db_pool).await?;
     for subscriber in subscribers {
@@ -68,6 +74,28 @@ pub async fn publish_newsletter(
     Ok(HttpResponse::Ok().finish())
 }
 
+async fn validate_credentials(
+    credentials: &Credentials,
+    db_pool: &PgPool,
+) -> Result<uuid::Uuid, PublishError> {
+    let user_id = sqlx::query!(
+        r#"
+            SELECT user_id FROM users WHERE username = $1 AND password = $2
+        "#,
+        credentials.username,
+        credentials.password.expose_secret()
+    )
+    .fetch_optional(db_pool)
+    .await
+    .context("Failed to perform a query to validate auth credentials")
+    .map_err(PublishError::UnexpectedError)?;
+
+    user_id
+        .map(|row| row.user_id)
+        .ok_or_else(|| anyhow::anyhow!("Invalid username or password"))
+        .map_err(PublishError::AuthError)
+}
+
 #[tracing::instrument(name = "Get confirmed subscribers", skip(db_pool))]
 async fn get_confirmed_subscribers(
     db_pool: &PgPool,
@@ -92,8 +120,8 @@ async fn get_confirmed_subscribers(
 }
 
 struct Credentials {
-    _username: String,
-    _password: secrecy::Secret<String>,
+    username: String,
+    password: secrecy::Secret<String>,
 }
 
 fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Error> {
@@ -123,8 +151,8 @@ fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Erro
         .to_string();
 
     Ok(Credentials {
-        _username: username,
-        _password: secrecy::Secret::new(password),
+        username,
+        password: secrecy::Secret::new(password),
     })
 }
 
