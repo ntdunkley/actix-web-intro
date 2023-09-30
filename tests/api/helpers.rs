@@ -1,3 +1,4 @@
+use sha3::{Digest, Sha3_256};
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::sync::Once;
 use uuid::Uuid;
@@ -15,6 +16,13 @@ pub struct TestApp {
     pub port: u16,
     pub db_pool: PgPool,
     pub email_server: MockServer,
+    pub test_user: TestUser,
+}
+
+pub struct TestUser {
+    user_id: Uuid,
+    username: String,
+    password: String,
 }
 
 pub struct ConfirmationLinks {
@@ -34,10 +42,9 @@ impl TestApp {
     }
 
     pub async fn post_newsletters(&self, body: serde_json::Value) -> reqwest::Response {
-        let (username, password) = self.test_user().await;
         reqwest::Client::new()
             .post(format!("{}/newsletters", self.address))
-            .basic_auth(username, Some(password))
+            .basic_auth(&self.test_user.username, Some(&self.test_user.password))
             .json(&body)
             .send()
             .await
@@ -68,18 +75,31 @@ impl TestApp {
 
         ConfirmationLinks { html, plain_text }
     }
+}
 
-    async fn test_user(&self) -> (String, String) {
-        let row = sqlx::query!(
+impl TestUser {
+    pub fn generate() -> Self {
+        Self {
+            user_id: Uuid::new_v4(),
+            username: Uuid::new_v4().to_string(),
+            password: Uuid::new_v4().to_string(),
+        }
+    }
+
+    pub async fn store(&self, db_pool: &PgPool) {
+        let password_hash = Sha3_256::digest(self.password.as_bytes());
+        let password_hash = format!("{:x}", password_hash);
+        sqlx::query!(
             r#"
-                SELECT username, password FROM users LIMIT 1;
-            "#
+                INSERT INTO users(user_id, username, password) VALUES ($1, $2, $3)
+            "#,
+            self.user_id,
+            self.username,
+            password_hash
         )
-        .fetch_one(&self.db_pool)
+        .execute(db_pool)
         .await
-        .expect("Failed to retrieve test user");
-
-        (row.username, row.password)
+        .expect("Failed to insert test user");
     }
 }
 
@@ -128,8 +148,9 @@ pub async fn spawn_app() -> TestApp {
         port: application_port,
         db_pool: get_db_pool(&config.database),
         email_server,
+        test_user: TestUser::generate(),
     };
-    add_test_user(&test_app.db_pool).await;
+    test_app.test_user.store(&test_app.db_pool).await;
     test_app
 }
 
@@ -153,18 +174,4 @@ async fn configure_db(settings: &DatabaseSettings) -> PgPool {
         .await
         .expect("Failed to migrate database");
     db_pool
-}
-
-async fn add_test_user(db_pool: &PgPool) {
-    sqlx::query!(
-        r#"
-        INSERT INTO users(user_id, username, password) VALUES ($1, $2, $3);
-        "#,
-        Uuid::new_v4(),
-        Uuid::new_v4().to_string(),
-        Uuid::new_v4().to_string()
-    )
-    .execute(db_pool)
-    .await
-    .expect("Failed to create test user");
 }
