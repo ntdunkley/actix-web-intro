@@ -142,7 +142,7 @@ fn verify_password_hash(
     expected_password_hash: Secret<String>,
     password: Secret<String>,
 ) -> Result<(), PublishError> {
-    let expected_password_hash = PasswordHash::new(&expected_password_hash.expose_secret())
+    let expected_password_hash = PasswordHash::new(expected_password_hash.expose_secret())
         .context("Failed to parse hash in PHC string format.")
         .map_err(PublishError::UnexpectedError)?;
     Argon2::default()
