@@ -80,21 +80,34 @@ async fn validate_credentials(
     credentials: Credentials,
     db_pool: &PgPool,
 ) -> Result<uuid::Uuid, PublishError> {
-    let (user_id, expected_password_hash) = get_stored_credentials(&credentials.username, db_pool)
-        .await
-        .map_err(PublishError::UnexpectedError)?
-        .ok_or_else(|| PublishError::AuthError(anyhow!("Invalid username")))?;
+    // We want to verify a hash even if the user doesn't exist. This is to help prevent timing
+    // attacks (the difference in response times when a user exists and when it doesn't).
+    // Therefore we set a default hash.
+    let mut user_id = None;
+    let mut expected_password_hash = Secret::new(
+        "$argon2id$v=19$m=15000,t=2,p=1$\
+                gZiV/M1gPc22ElAH/Jh1Hw$\
+                CWOrkoo7oJBQ/iyh7uJ0LO2aLEfrHwTWllSAxT0zRno"
+            .to_string(),
+    );
+
+    if let Some((stored_user_id, stored_password_hash)) =
+        get_stored_credentials(&credentials.username, db_pool)
+            .await
+            .map_err(PublishError::UnexpectedError)?
+    {
+        user_id = Some(stored_user_id);
+        expected_password_hash = stored_password_hash;
+    }
 
     crate::telemetry::spawn_blocking_with_tracing(move || {
         verify_password_hash(expected_password_hash, credentials.password)
     })
     .await
     .context("Failed to spawn task to verify password hash")
-    .map_err(PublishError::UnexpectedError)?
-    .context("Invalid password")
-    .map_err(PublishError::AuthError)?;
+    .map_err(PublishError::UnexpectedError)??;
 
-    Ok(user_id)
+    user_id.ok_or_else(|| PublishError::AuthError(anyhow!("Unknown username")))
 }
 
 #[tracing::instrument(name = "Get confirmed subscribers", skip(db_pool))]
