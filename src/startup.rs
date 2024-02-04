@@ -1,14 +1,16 @@
+use std::net::TcpListener;
+
+use actix_web::dev::Server;
+use actix_web::{web, App, HttpServer};
+use sqlx::postgres::PgPoolOptions;
+use sqlx::PgPool;
+use tracing_actix_web::TracingLogger;
+
 use crate::config::{DatabaseSettings, Settings};
 use crate::email_client::EmailClient;
 use crate::routes::{
     confirm, health_check, home, login, login_form, publish_newsletter, subscribe,
 };
-use actix_web::dev::Server;
-use actix_web::{web, App, HttpServer};
-use sqlx::postgres::PgPoolOptions;
-use sqlx::PgPool;
-use std::net::TcpListener;
-use tracing_actix_web::TracingLogger;
 
 pub struct Application {
     port: u16,
