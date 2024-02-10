@@ -1,10 +1,11 @@
+use actix_web::error::InternalError;
 use actix_web::http::header::LOCATION;
-use actix_web::http::StatusCode;
-use actix_web::{web, HttpResponse, ResponseError};
+use actix_web::{web, HttpResponse};
 use secrecy::Secret;
 use serde::Deserialize;
 use sqlx::PgPool;
 
+use crate::authentication::AuthError;
 use crate::{authentication, utils};
 
 #[derive(Deserialize)]
@@ -20,23 +21,31 @@ pub struct FormData {
 pub async fn login(
     form: web::Form<FormData>,
     db_pool: web::Data<PgPool>,
-) -> Result<HttpResponse, LoginError> {
+) -> Result<HttpResponse, InternalError<LoginError>> {
     let credentials = authentication::Credentials {
         username: form.0.username,
         password: form.0.password,
     };
 
-    let user_id = authentication::validate_credentials(credentials, &db_pool)
-        .await
-        .map_err(|e| match e {
-            authentication::AuthError::InvalidCredentials(_) => LoginError::AuthError(e.into()),
-            authentication::AuthError::UnexpectedError(_) => LoginError::UnexpectedError(e.into()),
-        })?;
+    match authentication::validate_credentials(credentials, &db_pool).await {
+        Ok(user_id) => {
+            tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
 
-    tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
-    Ok(HttpResponse::SeeOther()
-        .insert_header((LOCATION, "/"))
-        .finish())
+            Ok(HttpResponse::SeeOther()
+                .insert_header((LOCATION, "/"))
+                .finish())
+        }
+        Err(e) => {
+            let e = match e {
+                AuthError::InvalidCredentials(_) => LoginError::AuthError(e.into()),
+                AuthError::UnexpectedError(_) => LoginError::UnexpectedError(e.into()),
+            };
+            let response = HttpResponse::SeeOther()
+                .insert_header((LOCATION, "/login"))
+                .finish();
+            Err(InternalError::from_response(e, response))
+        }
+    }
 }
 
 #[derive(thiserror::Error)]
@@ -50,18 +59,5 @@ pub enum LoginError {
 impl std::fmt::Debug for LoginError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         utils::errors::error_chain_fmt(self, f)
-    }
-}
-
-impl ResponseError for LoginError {
-    fn status_code(&self) -> StatusCode {
-        StatusCode::SEE_OTHER
-    }
-
-    fn error_response(&self) -> HttpResponse {
-        let encoded_error = urlencoding::Encoded::new(self.to_string());
-        HttpResponse::build(self.status_code())
-            .insert_header((LOCATION, format!("/login?error={}", encoded_error)))
-            .finish()
     }
 }

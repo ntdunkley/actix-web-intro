@@ -1,9 +1,11 @@
+use std::sync::Once;
+
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHasher};
 use sqlx::{Connection, Executor, PgConnection, PgPool};
-use std::sync::Once;
 use uuid::Uuid;
 use wiremock::MockServer;
+
 use zero2prod::config;
 use zero2prod::config::DatabaseSettings;
 use zero2prod::startup::get_db_pool;
@@ -34,7 +36,7 @@ pub struct ConfirmationLinks {
 impl TestApp {
     pub async fn post_subscriptions(&self, body: String) -> reqwest::Response {
         reqwest::Client::new()
-            .post(format!("{}/subscriptions", self.address))
+            .post(format!("{}/subscriptions", &self.address))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(body)
             .send()
@@ -44,12 +46,29 @@ impl TestApp {
 
     pub async fn post_newsletters(&self, body: serde_json::Value) -> reqwest::Response {
         reqwest::Client::new()
-            .post(format!("{}/newsletters", self.address))
+            .post(format!("{}/newsletters", &self.address))
             .basic_auth(&self.test_user.username, Some(&self.test_user.password))
             .json(&body)
             .send()
             .await
             .expect("Failed to execute POST subscribe")
+    }
+
+    pub async fn post_login<T>(&self, body: &T) -> reqwest::Response
+    where
+        T: serde::Serialize,
+    {
+        let client = reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .expect("Could not build client");
+
+        client
+            .post(format!("{}/login", &self.address))
+            .form(&body)
+            .send()
+            .await
+            .expect("Failed to execute POST login")
     }
 
     pub fn get_confirmation_links(&self, email_request: &wiremock::Request) -> ConfirmationLinks {
@@ -164,6 +183,7 @@ async fn configure_db(settings: &DatabaseSettings) -> PgPool {
         .await
         .expect("Failed to connect to postgres");
 
+    tracing::info!("Creating database with name {}", &settings.database_name);
     connection
         .execute(format!(r#"CREATE DATABASE "{}";"#, settings.database_name).as_str())
         .await
