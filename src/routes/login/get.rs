@@ -1,13 +1,16 @@
-use actix_web::cookie::Cookie;
-use actix_web::{http::header::ContentType, HttpRequest, HttpResponse};
+use std::fmt::Write;
 
-pub async fn login_form(request: HttpRequest) -> HttpResponse {
-    let error_html = match request.cookie("_flash") {
-        Some(cookie) => format!("<p><i>{}</i></p>", cookie.value()),
-        None => "".to_string(),
-    };
+use actix_web::{http::header::ContentType, HttpResponse};
+use actix_web_flash_messages::{IncomingFlashMessages, Level};
 
-    let mut response = HttpResponse::Ok()
+pub async fn login_form(flash_messages: IncomingFlashMessages) -> HttpResponse {
+    let mut error_html = String::new();
+    for message in flash_messages.iter().filter(|m| m.level() == Level::Error) {
+        writeln!(error_html, "<p><i>{}</i></p>", message.content())
+            .expect("Could not write error message");
+    }
+
+    HttpResponse::Ok()
         .content_type(ContentType::html())
         .body(format!(
             r#"
@@ -38,11 +41,5 @@ pub async fn login_form(request: HttpRequest) -> HttpResponse {
                     </form>
                 </body>
             </html>"#,
-        ));
-
-    response
-        .add_removal_cookie(&Cookie::new("_flash", ""))
-        .expect("Could not unset _flash cookie");
-
-    response
+        ))
 }

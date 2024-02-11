@@ -1,7 +1,11 @@
 use std::net::TcpListener;
 
+use actix_web::cookie::Key;
 use actix_web::dev::Server;
 use actix_web::{web, App, HttpServer};
+use actix_web_flash_messages::storage::CookieMessageStore;
+use actix_web_flash_messages::FlashMessagesFramework;
+use secrecy::ExposeSecret;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use tracing_actix_web::TracingLogger;
@@ -39,7 +43,13 @@ impl Application {
         let address = format!("{}:{}", config.application.host, config.application.port);
         let listener = TcpListener::bind(address)?;
         let port = listener.local_addr().unwrap().port();
-        let server = run(listener, db_pool, email_client, config.application.base_url)?;
+        let server = run(
+            listener,
+            db_pool,
+            email_client,
+            config.application.base_url,
+            config.application.hmac_secret,
+        )?;
 
         Ok(Self { port, server })
     }
@@ -58,6 +68,7 @@ pub fn run(
     db_pool: PgPool,
     email_client: EmailClient,
     base_url: String,
+    hmac_secret: secrecy::Secret<String>,
 ) -> Result<Server, std::io::Error> {
     /*
     Use web::Data to wrap our connection pool in an ARC pointer.
@@ -67,9 +78,15 @@ pub fn run(
     let email_client = web::Data::new(email_client);
     let base_url = web::Data::new(ApplicationBaseUrl(base_url));
 
+    // Setup message framework for flash messages (using cookies)
+    let message_store =
+        CookieMessageStore::builder(Key::from(hmac_secret.expose_secret().as_bytes())).build();
+    let message_framework = FlashMessagesFramework::builder(message_store).build();
+
     let server = HttpServer::new(move || {
         App::new()
             .wrap(TracingLogger::default())
+            .wrap(message_framework.clone())
             .route("/health_check", web::get().to(health_check))
             .route("/newsletters", web::post().to(publish_newsletter))
             .route("/subscriptions", web::post().to(subscribe))
