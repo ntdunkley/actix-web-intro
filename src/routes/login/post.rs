@@ -41,6 +41,7 @@ pub async fn login(
                 AuthError::InvalidCredentials(_) => LoginError::AuthError(e.into()),
                 AuthError::UnexpectedError(_) => LoginError::UnexpectedError(e.into()),
             };
+
             let response = HttpResponse::SeeOther()
                 .insert_header((LOCATION, "/login"))
                 .cookie(Cookie::new("_flash", e.to_string()))

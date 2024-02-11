@@ -11,11 +11,12 @@ async fn auth_error_flash_message_is_shown_when_login_fails() {
     });
 
     let response = app.post_login(&body).await;
-    // Assert that we get redirected to /login
+    // Assert that we get redirected to /login and error flash message is there
     assert_redirect_is_to(&response, "/login");
-
-    // Get the HTML from GET /login
     let html_page = app.get_login_html().await;
+    assert!(html_page.contains("Authentication failed"));
 
-    assert!(html_page.contains("<p><i>Authentication failed</i></p>"));
+    // Refresh GET /login and assert error flash message is now gone
+    let html_page = app.get_login_html().await;
+    assert!(!html_page.contains("Authentication failed"));
 }
