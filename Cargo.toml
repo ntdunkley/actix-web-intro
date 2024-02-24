@@ -12,6 +12,7 @@ path = "src/lib.rs"
 
 [dependencies]
 actix-web = { version = "4", features = ["cookies"] }
+actix-session = { version = "0.9", features = ["redis-rs-tls-session"] }
 actix-web-flash-messages = { version = "0", features = ["cookies"] }
 config = "0.14"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

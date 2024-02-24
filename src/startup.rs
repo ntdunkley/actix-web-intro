@@ -1,5 +1,7 @@
 use std::net::TcpListener;
 
+use actix_session::storage::RedisSessionStore;
+use actix_session::SessionMiddleware;
 use actix_web::cookie::Key;
 use actix_web::dev::Server;
 use actix_web::{web, App, HttpServer};
@@ -24,7 +26,7 @@ pub struct Application {
 pub struct ApplicationBaseUrl(pub String);
 
 impl Application {
-    pub async fn build(config: Settings) -> Result<Self, std::io::Error> {
+    pub async fn build(config: Settings) -> Result<Self, anyhow::Error> {
         let db_pool = get_db_pool(&config.database);
 
         let sender_email = config
@@ -49,7 +51,9 @@ impl Application {
             email_client,
             config.application.base_url,
             config.application.hmac_secret,
-        )?;
+            config.redis_uri,
+        )
+        .await?;
 
         Ok(Self { port, server })
     }
@@ -63,13 +67,14 @@ impl Application {
     }
 }
 
-pub fn run(
+pub async fn run(
     listener: TcpListener,
     db_pool: PgPool,
     email_client: EmailClient,
     base_url: String,
     hmac_secret: secrecy::Secret<String>,
-) -> Result<Server, std::io::Error> {
+    redis_url: secrecy::Secret<String>,
+) -> Result<Server, anyhow::Error> {
     /*
     Use web::Data to wrap our connection pool in an ARC pointer.
     HttpServer::new below requires its closure to be cloneable.
@@ -79,14 +84,19 @@ pub fn run(
     let base_url = web::Data::new(ApplicationBaseUrl(base_url));
 
     // Setup message framework for flash messages (using cookies)
-    let message_store =
-        CookieMessageStore::builder(Key::from(hmac_secret.expose_secret().as_bytes())).build();
+    let secret_key = Key::from(hmac_secret.expose_secret().as_bytes());
+    let message_store = CookieMessageStore::builder(secret_key.clone()).build();
     let message_framework = FlashMessagesFramework::builder(message_store).build();
 
+    let redis_store = RedisSessionStore::new(redis_url.expose_secret()).await?;
     let server = HttpServer::new(move || {
         App::new()
             .wrap(TracingLogger::default())
             .wrap(message_framework.clone())
+            .wrap(SessionMiddleware::new(
+                redis_store.clone(),
+                secret_key.clone(),
+            ))
             .route("/health_check", web::get().to(health_check))
             .route("/newsletters", web::post().to(publish_newsletter))
             .route("/subscriptions", web::post().to(subscribe))

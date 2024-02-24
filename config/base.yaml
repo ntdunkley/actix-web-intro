@@ -15,3 +15,5 @@ email_client:
   sender_email: nathan.dunkley@bondsmith.co.uk
   auth_token: ae2d3b1a-d8f0-45a7-bdfb-5dc263fdbed0
   timeout_milliseconds: 10000
+
+redis_uri: "redis://127.0.0.1:6379"
