@@ -31,6 +31,8 @@ jobs:
           POSTGRES_DB: postgres
         ports:
           - 5321:5432
+      redis:
+        image: redis
     env:
       SQLX_VERSION: 0.7.1
       SQLX_FEATURES: "rustls,postgres"
