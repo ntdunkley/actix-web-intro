@@ -1,7 +1,9 @@
-use crate::domain::SubscriberEmail;
+use std::time::Duration;
+
 use secrecy::{ExposeSecret, Secret};
 use serde::Serialize;
-use std::time::Duration;
+
+use crate::domain::SubscriberEmail;
 
 pub struct EmailClient {
     http_client: reqwest::Client,
@@ -68,17 +70,18 @@ impl EmailClient {
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::SubscriberEmail;
-    use crate::email_client::EmailClient;
+    use std::time::Duration;
+
     use claims::{assert_err, assert_ok};
     use fake::faker::internet::en::SafeEmail;
     use fake::faker::lorem::en::{Paragraph, Sentence};
     use fake::{Fake, Faker};
     use secrecy::Secret;
-    use std::time::Duration;
-    use wiremock::http::Method;
     use wiremock::matchers::{any, header, header_exists, method, path};
     use wiremock::{Mock, MockServer, Request, ResponseTemplate};
+
+    use crate::domain::SubscriberEmail;
+    use crate::email_client::EmailClient;
 
     struct SendEmailBodyMatcher;
 
@@ -125,7 +128,7 @@ mod tests {
         Mock::given(header_exists("X-Postmark-Server-Token"))
             .and(header("Content-Type", "application/json"))
             .and(path("/email"))
-            .and(method(Method::Post))
+            .and(method("POST"))
             .and(SendEmailBodyMatcher)
             .respond_with(ResponseTemplate::new(200))
             .expect(1)

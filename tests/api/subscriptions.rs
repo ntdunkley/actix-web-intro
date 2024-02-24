@@ -1,15 +1,15 @@
-use crate::helpers::spawn_app;
 use reqwest::StatusCode;
-use wiremock::http::Method;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, ResponseTemplate};
+
+use crate::helpers::spawn_app;
 
 #[tokio::test]
 async fn when_subscribe_with_valid_form_data_return_200() {
     let test_app = spawn_app().await;
 
     Mock::given(path("/email"))
-        .and(method(Method::Post))
+        .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .expect(1)
         .mount(&test_app.email_server)
@@ -26,7 +26,7 @@ async fn when_subscribe_new_subscriber_is_persisted() {
     let test_app = spawn_app().await;
 
     Mock::given(path("/email"))
-        .and(method(Method::Post))
+        .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&test_app.email_server)
         .await;
@@ -96,7 +96,7 @@ async fn subscribe_with_valid_data_sends_email_confirmation() {
     let body = "name=bryan&email=bryan%40gmail.com";
 
     Mock::given(path("/email"))
-        .and(method(Method::Post))
+        .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .expect(1)
         .mount(&test_app.email_server)
@@ -113,7 +113,7 @@ async fn subscribe_sends_a_confirmation_email_with_a_link() {
     let body = "name=bryan&email=bryan%40gmail.com";
 
     Mock::given(path("/email"))
-        .and(method(Method::Post))
+        .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&test_app.email_server)
         .await;

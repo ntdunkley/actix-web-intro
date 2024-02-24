@@ -1,8 +1,8 @@
-use crate::helpers::spawn_app;
 use reqwest::StatusCode;
-use wiremock::http::Method;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, ResponseTemplate};
+
+use crate::helpers::spawn_app;
 
 #[tokio::test]
 async fn when_subscriber_confirms_email_without_token_then_reject_with_a_400() {
@@ -24,7 +24,7 @@ async fn when_clicking_link_returned_by_subscribe_response_is_200() {
     let test_app = spawn_app().await;
 
     Mock::given(path("/email"))
-        .and(method(Method::Post))
+        .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&test_app.email_server)
         .await;
