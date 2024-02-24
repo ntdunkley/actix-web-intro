@@ -33,6 +33,11 @@ jobs:
           - 5321:5432
       redis:
         image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       SQLX_VERSION: 0.7.1
       SQLX_FEATURES: "rustls,postgres"
