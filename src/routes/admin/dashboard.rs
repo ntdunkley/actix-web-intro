@@ -43,6 +43,7 @@ pub async fn admin_dashboard(
         )))
 }
 
+#[tracing::instrument(name = "Fetch username", skip(db_pool))]
 async fn fetch_username(user_id: &Uuid, db_pool: &PgPool) -> Result<String, anyhow::Error> {
     let row = sqlx::query!(
         r#"
