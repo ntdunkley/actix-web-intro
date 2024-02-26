@@ -36,3 +36,12 @@ async fn redirect_to_admin_dashboard_after_login_success() {
     let html_page = app.get_admin_dashboard_html().await;
     assert!(html_page.contains(&format!("Welcome {}", &app.test_user.username)));
 }
+
+#[tokio::test]
+async fn you_must_be_logged_in_to_access_admin_dashboard() {
+    let app = spawn_app().await;
+
+    // If navigating directly to admin dashboard, user should be redirected to login page
+    let response = app.get_admin_dashboard().await;
+    assert_redirect_is_to(&response, "/login");
+}
