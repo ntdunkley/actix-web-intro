@@ -27,11 +27,11 @@ tracing-log = "0"
 tracing-actix-web = "0.7"
 secrecy = { version = "0.8.0", features = ["serde"] }
 unicode-segmentation = "1"
-validator = "0.16"
+validator = "0"
 rand = { version = "0.8", features = ["std_rng"] }
 thiserror = "1"
 anyhow = "1"
-base64 = "0.21"
+base64 = "0"
 argon2 = { version = "0.5", features = ["std"] }
 urlencoding = "2"
 

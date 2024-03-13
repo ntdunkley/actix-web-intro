@@ -9,7 +9,7 @@ impl AsRef<str> for SubscriberEmail {
 
 impl SubscriberEmail {
     pub fn parse(email: String) -> Result<Self, String> {
-        if !validator::validate_email(&email) {
+        if !validator::ValidateEmail::validate_email(&email) {
             Err(format!("{} is not a valid subscriber email.", email))
         } else {
             Ok(Self(email))
@@ -19,12 +19,13 @@ impl SubscriberEmail {
 
 #[cfg(test)]
 mod tests {
-    use super::SubscriberEmail;
     use claims::assert_err;
-    use fake::faker::internet::en::SafeEmail;
     use fake::Fake;
+    use fake::faker::internet::en::SafeEmail;
     use quickcheck::{Arbitrary, Gen};
     use quickcheck_macros::quickcheck;
+
+    use super::SubscriberEmail;
 
     #[derive(Debug, Clone)]
     struct ValidEmailFixture(String);
