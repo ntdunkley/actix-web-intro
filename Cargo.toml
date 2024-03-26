@@ -17,8 +17,8 @@ actix-web-flash-messages = { version = "0", features = ["cookies"] }
 config = "0.14"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1", features = ["derive"] }
-serde-aux = "4.1"
-uuid = { version = "1", features = ["v4", "serde"] }
+serde-aux = "4"
+uuid = { version = "1.8", features = ["v4", "serde"] }
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 tracing = { version = "0.1", features = ["log"] }
 tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
@@ -48,7 +48,7 @@ features = [
 ]
 
 [dependencies.reqwest]
-version = "0.11"
+version = "0"
 default-features = false
 features = ["json", "rustls-tls", "cookies"]
 
