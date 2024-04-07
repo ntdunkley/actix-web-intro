@@ -1,3 +1,7 @@
+use std::error::Error;
+use std::fmt::{Debug, Display, Formatter};
+use std::ops::DerefMut;
+
 use actix_web::http::StatusCode;
 use actix_web::{web, HttpResponse, ResponseError};
 use anyhow::Context;
@@ -6,9 +10,6 @@ use rand::distributions::Alphanumeric;
 use rand::Rng;
 use serde::Deserialize;
 use sqlx::{PgPool, Postgres, Transaction};
-use std::error::Error;
-use std::fmt::{Debug, Display, Formatter};
-use std::ops::DerefMut;
 use uuid::Uuid;
 
 use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
@@ -173,7 +174,7 @@ pub enum SubscribeError {
 
 impl Debug for SubscribeError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        utils::errors::error_chain_fmt(self, f)
+        utils::error_chain_fmt(self, f)
     }
 }
 
@@ -190,7 +191,7 @@ pub struct StoreTokenError(sqlx::Error);
 
 impl Debug for StoreTokenError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        utils::errors::error_chain_fmt(self, f)
+        utils::error_chain_fmt(self, f)
     }
 }
 

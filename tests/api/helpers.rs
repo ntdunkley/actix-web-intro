@@ -90,6 +90,26 @@ impl TestApp {
         self.get_admin_dashboard().await.text().await.unwrap()
     }
 
+    pub async fn get_change_password(&self) -> reqwest::Response {
+        self.api_client
+            .get(format!("{}/admin/password", self.address))
+            .send()
+            .await
+            .expect("Could not GET /admin/password")
+    }
+
+    pub async fn post_change_password<T>(&self, body: &T) -> reqwest::Response
+    where
+        T: serde::Serialize,
+    {
+        self.api_client
+            .post(format!("{}/admin/password", &self.address))
+            .form(&body)
+            .send()
+            .await
+            .expect("Failed to execute POST change password")
+    }
+
     pub fn get_confirmation_links(&self, email_request: &wiremock::Request) -> ConfirmationLinks {
         let body: serde_json::Value = serde_json::from_slice(&email_request.body).unwrap();
 

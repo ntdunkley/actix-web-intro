@@ -1,9 +1,10 @@
+use std::fmt::{Debug, Formatter};
+
 use actix_web::http::StatusCode;
 use actix_web::{web, HttpResponse};
 use anyhow::Context;
 use serde::Deserialize;
 use sqlx::PgPool;
-use std::fmt::{Debug, Formatter};
 use uuid::Uuid;
 
 use crate::utils;
@@ -76,7 +77,7 @@ pub enum ConfirmSubscriberError {
 
 impl Debug for ConfirmSubscriberError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        utils::errors::error_chain_fmt(&self, f)
+        utils::error_chain_fmt(&self, f)
     }
 }
 

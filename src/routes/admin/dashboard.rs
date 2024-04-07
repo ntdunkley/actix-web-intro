@@ -1,31 +1,22 @@
-use actix_web::http::header::{ContentType, LOCATION};
+use actix_web::http::header::ContentType;
 use actix_web::{web, HttpResponse};
 use anyhow::Context;
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::session_state::TypedSession;
-
-// Return an opaque 500 while preserving the error's root cause for logging.
-fn error_500<T>(e: T) -> actix_web::Error
-where
-    T: std::fmt::Debug + std::fmt::Display + 'static,
-{
-    actix_web::error::ErrorInternalServerError(e)
-}
+use crate::utils;
 
 pub async fn admin_dashboard(
     session: TypedSession,
     db_pool: web::Data<PgPool>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let username = if let Some(user_id) = session.get_user_id().map_err(error_500)? {
+    let username = if let Some(user_id) = session.get_user_id().map_err(utils::error_500)? {
         fetch_username(&user_id, &db_pool)
             .await
-            .map_err(error_500)?
+            .map_err(utils::error_500)?
     } else {
-        return Ok(HttpResponse::SeeOther()
-            .insert_header((LOCATION, "/login"))
-            .finish());
+        return Ok(utils::see_other("/login"));
     };
 
     Ok(HttpResponse::Ok()

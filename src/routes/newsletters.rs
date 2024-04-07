@@ -1,7 +1,3 @@
-use crate::authentication::{AuthError, Credentials};
-use crate::domain::SubscriberEmail;
-use crate::email_client::EmailClient;
-use crate::{authentication, utils};
 use actix_web::http::header::{HeaderMap, HeaderValue};
 use actix_web::http::{header, StatusCode};
 use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
@@ -9,6 +5,11 @@ use anyhow::Context;
 use base64::Engine;
 use secrecy::Secret;
 use sqlx::PgPool;
+
+use crate::authentication::{AuthError, Credentials};
+use crate::domain::SubscriberEmail;
+use crate::email_client::EmailClient;
+use crate::{authentication, utils};
 
 #[derive(serde::Deserialize, Debug)]
 pub struct BodyData {
@@ -146,7 +147,7 @@ pub enum PublishError {
 
 impl std::fmt::Debug for PublishError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        utils::errors::error_chain_fmt(self, f)
+        utils::error_chain_fmt(self, f)
     }
 }
 

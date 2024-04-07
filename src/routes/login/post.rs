@@ -71,6 +71,6 @@ pub enum LoginError {
 
 impl std::fmt::Debug for LoginError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        utils::errors::error_chain_fmt(self, f)
+        utils::error_chain_fmt(self, f)
     }
 }
