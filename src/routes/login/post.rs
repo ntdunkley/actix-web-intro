@@ -1,5 +1,4 @@
 use actix_web::error::InternalError;
-use actix_web::http::header::LOCATION;
 use actix_web::{web, HttpResponse};
 use actix_web_flash_messages::FlashMessage;
 use secrecy::Secret;
@@ -38,9 +37,7 @@ pub async fn login(
                 .insert_user_id(user_id)
                 .map_err(|e| login_failure_redirect(LoginError::UnexpectedError(e.into())))?;
 
-            Ok(HttpResponse::SeeOther()
-                .insert_header((LOCATION, "/admin/dashboard"))
-                .finish())
+            Ok(utils::see_other("/admin/dashboard"))
         }
         Err(e) => {
             let e = match e {
@@ -55,9 +52,7 @@ pub async fn login(
 fn login_failure_redirect(e: LoginError) -> InternalError<LoginError> {
     // Set the "_flash" error cookie message
     FlashMessage::error(e.to_string()).send();
-    let response = HttpResponse::SeeOther()
-        .insert_header((LOCATION, "/login"))
-        .finish();
+    let response = utils::see_other("/login");
     InternalError::from_response(e, response)
 }
 

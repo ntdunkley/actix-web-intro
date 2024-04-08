@@ -31,6 +31,10 @@ pub async fn admin_dashboard(
                 </head>
                 <body>
                 <p>Welcome {username}!</p>
+                <p>Available actions:</p>
+                <ol>
+                    <li><a href="/admin/password">Change password</a></li>
+                </ol>
                 </body>
             </html>
             "#
@@ -38,7 +42,7 @@ pub async fn admin_dashboard(
 }
 
 #[tracing::instrument(name = "Fetch username", skip(db_pool))]
-async fn fetch_username(user_id: &Uuid, db_pool: &PgPool) -> Result<String, anyhow::Error> {
+pub async fn fetch_username(user_id: &Uuid, db_pool: &PgPool) -> Result<String, anyhow::Error> {
     let row = sqlx::query!(
         r#"
         SELECT username

@@ -98,6 +98,10 @@ impl TestApp {
             .expect("Could not GET /admin/password")
     }
 
+    pub async fn get_change_password_html(&self) -> String {
+        self.get_change_password().await.text().await.unwrap()
+    }
+
     pub async fn post_change_password<T>(&self, body: &T) -> reqwest::Response
     where
         T: serde::Serialize,

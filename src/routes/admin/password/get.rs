@@ -1,16 +1,31 @@
-use actix_web::http::header::ContentType;
-use actix_web::HttpResponse;
-
 use crate::session_state::TypedSession;
 use crate::utils;
+use actix_web::http::header::ContentType;
+use actix_web::HttpResponse;
+use actix_web_flash_messages::IncomingFlashMessages;
+use std::fmt::Write;
 
-pub async fn change_password_form(session: TypedSession) -> Result<HttpResponse, actix_web::Error> {
+pub async fn change_password_form(
+    session: TypedSession,
+    flash_messages: IncomingFlashMessages,
+) -> Result<HttpResponse, actix_web::Error> {
     if session.get_user_id().map_err(utils::error_500)?.is_none() {
         return Ok(utils::see_other("/login"));
     }
+    let mut flash_message_html = String::new();
+    flash_messages.iter().for_each(|message| {
+        writeln!(
+            &mut flash_message_html,
+            "<p><i>{}</i></p>",
+            message.content()
+        )
+        .expect("Could not write flash message")
+    });
 
-    Ok(HttpResponse::Ok().content_type(ContentType::html()).body(
-        r#"
+    Ok(HttpResponse::Ok()
+        .content_type(ContentType::html())
+        .body(format!(
+            r#"
         <!DOCTYPE html>
         <html lang="en">
             <head>
@@ -18,12 +33,13 @@ pub async fn change_password_form(session: TypedSession) -> Result<HttpResponse,
                 <title>Change Password</title>
             </head>
             <body>
+                {flash_message_html}
                 <form action="/admin/password" method="post">
                     <label>Current password
                         <input
                             type="password"
                             placeholder="Enter current password"
-                            name="current_password"
+                            name="old_password"
                         >
                     </label><br/>
                     <label>New password
@@ -37,7 +53,7 @@ pub async fn change_password_form(session: TypedSession) -> Result<HttpResponse,
                         <input
                             type="password"
                             placeholder="Type the new password again"
-                            name="new_password_check"
+                            name="new_password_confirm"
                         >
                     </label><br/>
                     <button type="submit">Change password</button>
@@ -46,5 +62,5 @@ pub async fn change_password_form(session: TypedSession) -> Result<HttpResponse,
             </body>
         </html>
         "#,
-    ))
+        )))
 }
