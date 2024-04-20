@@ -28,6 +28,16 @@ pub async fn change_password(
     }
     let user_id = user_id.unwrap();
 
+    // New passwords must be greater than 12 and shorter than 129
+    if form.new_password.expose_secret().len() < 13 || form.new_password.expose_secret().len() > 128
+    {
+        FlashMessage::error(
+            "New password must be longer than 12 characters and shorter than 129 characters",
+        )
+        .send();
+        return Ok(utils::see_other("/admin/password"));
+    }
+
     // New passwords must match
     if form.new_password.expose_secret() != form.new_password_confirm.expose_secret() {
         let flash_message_text = "You entered two different new passwords - \
