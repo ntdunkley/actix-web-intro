@@ -5,7 +5,6 @@ use secrecy::Secret;
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use crate::authentication::AuthError;
 use crate::session_state::TypedSession;
 use crate::{authentication, utils};
 
@@ -41,8 +40,10 @@ pub async fn login(
         }
         Err(e) => {
             let e = match e {
-                AuthError::InvalidCredentials(_) => LoginError::AuthError(e.into()),
-                AuthError::UnexpectedError(_) => LoginError::UnexpectedError(e.into()),
+                authentication::AuthError::InvalidCredentials(_) => LoginError::AuthError(e.into()),
+                authentication::AuthError::UnexpectedError(_) => {
+                    LoginError::UnexpectedError(e.into())
+                }
             };
             Err(login_failure_redirect(e))
         }

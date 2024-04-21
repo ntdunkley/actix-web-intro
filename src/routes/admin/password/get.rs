@@ -1,17 +1,11 @@
-use crate::session_state::TypedSession;
-use crate::utils;
 use actix_web::http::header::ContentType;
 use actix_web::HttpResponse;
 use actix_web_flash_messages::IncomingFlashMessages;
 use std::fmt::Write;
 
 pub async fn change_password_form(
-    session: TypedSession,
     flash_messages: IncomingFlashMessages,
 ) -> Result<HttpResponse, actix_web::Error> {
-    if session.get_user_id().map_err(utils::error_500)?.is_none() {
-        return Ok(utils::see_other("/login"));
-    }
     let mut flash_message_html = String::new();
     flash_messages.iter().for_each(|message| {
         writeln!(
