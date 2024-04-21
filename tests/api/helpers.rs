@@ -98,6 +98,14 @@ impl TestApp {
             .expect("Could not GET /admin/password")
     }
 
+    pub async fn post_logout(&self) -> reqwest::Response {
+        self.api_client
+            .post(format!("{}/admin/logout", &self.address))
+            .send()
+            .await
+            .expect("Failed to execute POST logout")
+    }
+
     pub async fn get_change_password_html(&self) -> String {
         self.get_change_password().await.text().await.unwrap()
     }

@@ -153,3 +153,49 @@ async fn new_password_must_be_shorter_than_129_characters() {
         "<i>New password must be longer than 12 characters and shorter than 129 characters</i>"
     ));
 }
+
+#[tokio::test]
+async fn changing_password_works() {
+    let test_app = spawn_app().await;
+    let new_password = crate::utils::generate_random_text_of_length(16);
+
+    // Act - Part 1 - Login
+    let response = test_app
+        .post_login(&serde_json::json!({
+            "username": test_app.test_user.username,
+            "password": test_app.test_user.password
+        }))
+        .await;
+    assert_redirect_is_to(&response, "/admin/dashboard");
+
+    // Act - Part 2 - Change password
+    let response = test_app
+        .post_change_password(&serde_json::json!({
+            "old_password": &test_app.test_user.password,
+            "new_password": &new_password,
+            "new_password_confirm": &new_password,
+        }))
+        .await;
+    assert_redirect_is_to(&response, "/admin/password");
+
+    // Act - Part 3 - Follow the redirect
+    let html_page = test_app.get_change_password_html().await;
+    assert!(html_page.contains("You have successfully changed your password"));
+
+    // Act - Part 4 - Logout
+    let response = test_app.post_logout().await;
+    assert_redirect_is_to(&response, "/login");
+
+    // Act - Part 5 - Follow the redirect
+    let html_page = test_app.get_login_html().await;
+    assert!(html_page.contains("You have successfully logged out"));
+
+    // Act - Part 6 - Login with new password
+    let response = test_app
+        .post_login(&serde_json::json!({
+            "username": test_app.test_user.username,
+            "password": &new_password
+        }))
+        .await;
+    assert_redirect_is_to(&response, "/admin/dashboard");
+}

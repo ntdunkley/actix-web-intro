@@ -11,7 +11,7 @@ pub fn assert_redirect_is_to(response: &reqwest::Response, location: &str) {
     assert_eq!(location_header, location);
 }
 
-pub fn generate_random_text_of_length<'a>(length: u8) -> String {
+pub fn generate_random_text_of_length(length: u8) -> String {
     rand::thread_rng()
         .sample_iter(&Alphanumeric)
         .take(length as usize)

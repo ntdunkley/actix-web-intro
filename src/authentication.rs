@@ -1,7 +1,9 @@
 use anyhow::{anyhow, Context};
-use argon2::{Argon2, PasswordHash, PasswordVerifier};
+use argon2::password_hash::SaltString;
+use argon2::{Algorithm, Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier, Version};
 use secrecy::{ExposeSecret, Secret};
 use sqlx::PgPool;
+use uuid::Uuid;
 
 #[derive(thiserror::Error, Debug)]
 pub enum AuthError {
@@ -20,7 +22,7 @@ pub struct Credentials {
 pub async fn validate_credentials(
     credentials: Credentials,
     db_pool: &PgPool,
-) -> Result<uuid::Uuid, AuthError> {
+) -> Result<Uuid, AuthError> {
     // We want to verify a hash even if the user doesn't exist. This is to help prevent timing
     // attacks (the difference in response times when a user exists and when it doesn't).
     // Therefore we set a default hash.
@@ -46,6 +48,35 @@ pub async fn validate_credentials(
     .context("Failed to spawn task to verify password hash")??;
 
     user_id.ok_or_else(|| AuthError::InvalidCredentials(anyhow!("Unknown username")))
+}
+
+#[tracing::instrument(name = "Change password", skip(new_password, db_pool))]
+pub async fn change_password(
+    user_id: Uuid,
+    new_password: Secret<String>,
+    db_pool: &PgPool,
+) -> Result<(), anyhow::Error> {
+    // Compute password hash
+    let password_hash =
+        crate::telemetry::spawn_blocking_with_tracing(move || compute_password_hash(new_password))
+            .await?
+            .context("Failed to hash password")?;
+
+    // Change password
+    sqlx::query!(
+        r#"
+        UPDATE users SET
+            password = $2
+        WHERE user_id = $1
+        "#,
+        user_id,
+        password_hash.expose_secret()
+    )
+    .execute(db_pool)
+    .await
+    .context("Failed to change user's password in database")?;
+
+    Ok(())
 }
 
 #[tracing::instrument(name = "Get stored credentials", skip(username, db_pool))]
@@ -77,4 +108,17 @@ fn verify_password_hash(
         .verify_password(password.expose_secret().as_bytes(), &expected_password_hash)
         .context("Invalid password")
         .map_err(AuthError::InvalidCredentials)
+}
+
+fn compute_password_hash(password: Secret<String>) -> Result<Secret<String>, anyhow::Error> {
+    let salt = SaltString::generate(rand::thread_rng());
+    let password_hash = Argon2::new(
+        Algorithm::Argon2id,
+        Version::V0x13,
+        Params::new(15000, 2, 1, None).expect("Could not create Argon params"),
+    )
+    .hash_password(password.expose_secret().as_bytes(), &salt)?
+    .to_string();
+
+    Ok(Secret::new(password_hash))
 }

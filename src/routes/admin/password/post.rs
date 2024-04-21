@@ -63,5 +63,10 @@ pub async fn change_password(
             authentication::AuthError::UnexpectedError(e) => Err(utils::error_500(e)),
         };
     }
-    todo!()
+    authentication::change_password(user_id, form.0.new_password, &db_pool)
+        .await
+        .map_err(utils::error_500)?;
+
+    FlashMessage::info("You have successfully changed your password").send();
+    Ok(utils::see_other("/admin/password"))
 }
