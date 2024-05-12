@@ -17,7 +17,7 @@ use crate::config::{DatabaseSettings, Settings};
 use crate::email_client::EmailClient;
 use crate::routes::{
     admin_dashboard, change_password, change_password_form, confirm, health_check, home, login,
-    login_form, logout, publish_newsletter, subscribe,
+    login_form, logout, publish_newsletter, publish_newsletter_form, subscribe,
 };
 
 pub struct Application {
@@ -111,6 +111,7 @@ pub async fn run(
                     .wrap(actix_web_lab::middleware::from_fn(reject_anonymous_users))
                     .route("/dashboard", web::get().to(admin_dashboard))
                     .route("/logout", web::post().to(logout))
+                    .route("/newsletters", web::get().to(publish_newsletter_form))
                     .route("/password", web::get().to(change_password_form))
                     .route("/password", web::post().to(change_password)),
             )
