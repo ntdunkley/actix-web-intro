@@ -103,7 +103,6 @@ pub async fn run(
             .route("/health_check", web::get().to(health_check))
             .route("/login", web::get().to(login_form))
             .route("/login", web::post().to(login))
-            .route("/newsletters", web::post().to(publish_newsletter))
             .route("/subscriptions", web::post().to(subscribe))
             .route("/subscriptions/confirm", web::get().to(confirm))
             .service(
@@ -112,6 +111,7 @@ pub async fn run(
                     .route("/dashboard", web::get().to(admin_dashboard))
                     .route("/logout", web::post().to(logout))
                     .route("/newsletters", web::get().to(publish_newsletter_form))
+                    .route("/newsletters", web::post().to(publish_newsletter))
                     .route("/password", web::get().to(change_password_form))
                     .route("/password", web::post().to(change_password)),
             )
