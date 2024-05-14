@@ -120,6 +120,10 @@ impl TestApp {
             .expect("Could not GET /admin/newsletters")
     }
 
+    pub async fn get_publish_newsletter_html(&self) -> String {
+        self.get_publish_newsletter().await.text().await.unwrap()
+    }
+
     pub async fn post_publish_newsletter<T: serde::Serialize>(
         &self,
         body: &T,

@@ -30,9 +30,10 @@ async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
     assert_redirect_is_to(&response, "/admin/newsletters");
 
     // Act - Part 2 - Follow the redirect
-    //let html_page = app.get_publish_newsletter_html().await;
-    //assert!(html_page.contains("<p><i>The newsletter issue has been published!</i></p>"));
-    // Mock verifies on Drop that we haven't sent the newsletter email
+    let html_page = app.get_publish_newsletter_html().await;
+    assert!(html_page.contains("<p><i>The newsletter issue has been published!</i></p>"));
+
+    // Act - Part 3 - Mock object verifies on Drop that we have sent a newsletter
 }
 
 #[tokio::test]
@@ -53,7 +54,7 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
         .mount(&app.email_server)
         .await;
 
-    // Act
+    // Act - Part 1 - Publish newsletter
     let newsletter_request_body = serde_json::json!({
         "title": "Newsletter title",
         "html_content": "<p>Newsletter body as HTML</p>",
@@ -61,7 +62,12 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
     });
     let response = app.post_publish_newsletter(&newsletter_request_body).await;
     assert_redirect_is_to(&response, "/admin/newsletters");
-    // Mock verifies on Drop that we have sent a newsletter
+
+    // Act - Part 2 - Follow the redirect
+    let html_page = app.get_publish_newsletter_html().await;
+    assert!(html_page.contains("<p><i>The newsletter issue has been published!</i></p>"));
+
+    // Act - Part 3 - Mock object verifies on Drop that we have sent a newsletter
 }
 
 #[tokio::test]

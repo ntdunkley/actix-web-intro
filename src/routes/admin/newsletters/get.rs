@@ -1,9 +1,19 @@
 use actix_web::http::header::ContentType;
 use actix_web::HttpResponse;
+use actix_web_flash_messages::IncomingFlashMessages;
 
-pub async fn publish_newsletter_form() -> Result<HttpResponse, actix_web::Error> {
-    Ok(HttpResponse::Ok().content_type(ContentType::html()).body(
-        r#"
+pub async fn publish_newsletter_form(
+    flash_messages: IncomingFlashMessages,
+) -> Result<HttpResponse, actix_web::Error> {
+    let msg_html = flash_messages
+        .iter()
+        .map(|msg| format!("<p><i>{}</i></p>", msg.content()))
+        .collect::<String>();
+
+    Ok(HttpResponse::Ok()
+        .content_type(ContentType::html())
+        .body(format!(
+            r#"
         <!DOCTYPE html>
         <html lang="en">
             <head>
@@ -11,6 +21,7 @@ pub async fn publish_newsletter_form() -> Result<HttpResponse, actix_web::Error>
                 <title>Publish Newsletter Issue</title>
             </head>
             <body>
+                {msg_html}
                 <form action="/admin/newsletters" method="post">
                     <label>Title:<br>
                         <input
@@ -44,5 +55,5 @@ pub async fn publish_newsletter_form() -> Result<HttpResponse, actix_web::Error>
             </body>
             </html>
         "#,
-    ))
+        )))
 }
