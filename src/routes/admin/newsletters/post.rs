@@ -43,15 +43,17 @@ pub async fn publish_newsletter(
     } = form.0;
     let idempotency_key: idempotency::IdempotencyKey =
         idempotency_key.try_into().map_err(utils::error_400)?;
-    let saved_response = idempotency::get_saved_response(&db_pool, &idempotency_key, user_id.0)
-        .await
-        .map_err(utils::error_500)?;
 
-    // Return early if we already have a saved response
-    if let Some(saved_response) = saved_response {
-        FlashMessage::info(NEWSLETTER_PUBLISHED).send();
-        return Ok(saved_response);
-    }
+    let transaction = match idempotency::try_processing(&db_pool, &idempotency_key, user_id.0)
+        .await
+        .map_err(utils::error_500)?
+    {
+        idempotency::NextAction::StartProcessing(t) => t,
+        idempotency::NextAction::ReturnSavedResponse(saved_response) => {
+            FlashMessage::info(NEWSLETTER_PUBLISHED).send();
+            return Ok(saved_response);
+        }
+    };
 
     let subscribers = get_confirmed_subscribers(&db_pool)
         .await
@@ -81,7 +83,7 @@ pub async fn publish_newsletter(
     FlashMessage::info(NEWSLETTER_PUBLISHED).send();
 
     let response = utils::see_other("/admin/newsletters");
-    let response = idempotency::save_response(&db_pool, &idempotency_key, user_id.0, response)
+    let response = idempotency::save_response(transaction, &idempotency_key, user_id.0, response)
         .await
         .map_err(utils::error_500)?;
     Ok(response)
