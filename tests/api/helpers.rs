@@ -6,11 +6,12 @@ use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
 use wiremock::MockServer;
 
-use zero2prod::config;
 use zero2prod::config::DatabaseSettings;
+use zero2prod::email_client::EmailClient;
 use zero2prod::startup::get_db_pool;
 use zero2prod::startup::Application;
 use zero2prod::telemetry;
+use zero2prod::{config, issue_delivery_worker};
 
 static TRACING: Once = Once::new();
 
@@ -21,6 +22,7 @@ pub struct TestApp {
     pub email_server: MockServer,
     pub test_user: TestUser,
     pub api_client: reqwest::Client,
+    pub email_client: EmailClient,
 }
 
 pub struct TestUser {
@@ -35,6 +37,17 @@ pub struct ConfirmationLinks {
 }
 
 impl TestApp {
+    pub async fn dispatch_all_pending_emails(&self) {
+        loop {
+            if let issue_delivery_worker::ExecutionOutcome::EmptyQueue =
+                issue_delivery_worker::try_execute_task(&self.db_pool, &self.email_client)
+                    .await
+                    .unwrap()
+            {
+                break;
+            }
+        }
+    }
     pub async fn post_subscriptions(&self, body: String) -> reqwest::Response {
         self.api_client
             .post(format!("{}/subscriptions", &self.address))
@@ -189,6 +202,15 @@ impl TestUser {
         .await
         .expect("Failed to insert test user");
     }
+
+    pub async fn login(&self, test_app: &TestApp) {
+        test_app
+            .post_login(&serde_json::json!({
+                    "username": self.username,
+                    "password": self.password
+            }))
+            .await;
+    }
 }
 
 pub async fn spawn_app() -> TestApp {
@@ -244,6 +266,7 @@ pub async fn spawn_app() -> TestApp {
         email_server,
         test_user: TestUser::generate(),
         api_client: client,
+        email_client: config.email_client.client(),
     };
     test_app.test_user.store(&test_app.db_pool).await;
     test_app

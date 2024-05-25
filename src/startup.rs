@@ -30,19 +30,7 @@ pub struct ApplicationBaseUrl(pub String);
 impl Application {
     pub async fn build(config: Settings) -> Result<Self, anyhow::Error> {
         let db_pool = get_db_pool(&config.database);
-
-        let sender_email = config
-            .email_client
-            .sender_email()
-            .expect("Could not parse sender email");
-
-        let timeout = config.email_client.timeout();
-        let email_client = EmailClient::new(
-            config.email_client.base_url,
-            sender_email,
-            config.email_client.auth_token,
-            timeout,
-        );
+        let email_client = config.email_client.client();
 
         let address = format!("{}:{}", config.application.host, config.application.port);
         let listener = TcpListener::bind(address)?;
